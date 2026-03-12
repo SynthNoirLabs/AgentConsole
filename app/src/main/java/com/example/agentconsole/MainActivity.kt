@@ -1,5 +1,6 @@
 package com.example.agentconsole
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -38,6 +39,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 
+private const val PREFS_NAME = "agent_console_prefs"
+private const val PREF_AGENT = "last_agent"
+private const val PREF_WORKDIR = "last_workdir"
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,10 +58,22 @@ class MainActivity : ComponentActivity() {
 fun AgentConsoleApp() {
     val context = LocalContext.current
     val uiState by ExecutionStore.state.collectAsState()
-    var workingDir by rememberSaveable { mutableStateOf("~/projects/your-repo") }
+    val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
+
+    var workingDir by rememberSaveable {
+        mutableStateOf(prefs.getString(PREF_WORKDIR, "~/projects/your-repo") ?: "~/projects/your-repo")
+    }
     var prompt by rememberSaveable { mutableStateOf("Summarize this codebase and suggest the next three refactors.") }
-    var selectedAgent by rememberSaveable { mutableStateOf(Agent.CLAUDE) }
+    var selectedAgent by rememberSaveable {
+        val savedName = prefs.getString(PREF_AGENT, null)
+        val agent = Agent.entries.find { it.name == savedName } ?: Agent.CLAUDE
+        mutableStateOf(agent)
+    }
     val termuxInstalled = remember { TermuxRunner.isTermuxInstalled(context) }
+
+    val workdirError = remember(workingDir) { TermuxRunner.validateWorkingDir(workingDir) }
+    val promptError = remember(prompt) { if (prompt.isBlank()) "Prompt must not be empty." else null }
+    val canRun = !uiState.isRunning && workdirError == null && promptError == null
 
     Scaffold(
         topBar = {
@@ -75,14 +92,23 @@ fun AgentConsoleApp() {
 
             AgentDropdown(
                 selectedAgent = selectedAgent,
-                onSelected = { selectedAgent = it }
+                onSelected = {
+                    selectedAgent = it
+                    prefs.edit().putString(PREF_AGENT, it.name).apply()
+                }
             )
 
             OutlinedTextField(
                 value = workingDir,
-                onValueChange = { workingDir = it },
+                onValueChange = {
+                    workingDir = it
+                    prefs.edit().putString(PREF_WORKDIR, it).apply()
+                },
                 label = { Text("Repo / working directory") },
-                supportingText = { Text("Examples: ~/projects/myrepo or /sdcard/Download/myrepo") },
+                supportingText = {
+                    Text(workdirError ?: "Examples: ~/projects/myrepo or /sdcard/Download/myrepo")
+                },
+                isError = workdirError != null,
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -91,6 +117,8 @@ fun AgentConsoleApp() {
                 value = prompt,
                 onValueChange = { prompt = it },
                 label = { Text("Prompt") },
+                supportingText = if (promptError != null) {{ Text(promptError) }} else null,
+                isError = promptError != null,
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 5,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
@@ -106,7 +134,7 @@ fun AgentConsoleApp() {
                             workingDir = workingDir
                         )
                     },
-                    enabled = !uiState.isRunning
+                    enabled = canRun
                 ) {
                     Text(if (uiState.isRunning) "Running\u2026" else "Run")
                 }
