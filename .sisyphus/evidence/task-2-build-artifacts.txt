@@ -1,0 +1,2 @@
+debug apk exists
+unit test report exists

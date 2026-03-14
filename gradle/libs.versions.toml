@@ -12,6 +12,7 @@ termux-shared = "0.118.0"
 guava-listenablefuture = "9999.0-empty-to-avoid-conflict-with-guava"
 junit4 = "4.13.2"
 kotlinx-coroutines-test = "1.8.1"
+material = "1.12.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidx-core-ktx" }
@@ -24,10 +25,11 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
-termux-shared = { group = "com.termux", name = "termux-shared", version.ref = "termux-shared" }
+termux-shared = { group = "com.termux.termux-app", name = "termux-shared", version.ref = "termux-shared" }
 guava-listenablefuture = { group = "com.google.guava", name = "listenablefuture", version.ref = "guava-listenablefuture" }
 junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test" }
+google-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
