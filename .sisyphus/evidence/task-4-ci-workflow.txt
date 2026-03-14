@@ -1,0 +1,20 @@
+QA Evidence: Task 4 - CI/CD Pipeline + Community Files + GitHub Config
+Date: $(date)
+
+=== CI Workflow ===
+PASS: .github/workflows/android.yml exists
+PASS: workflow has 2 matches for assembleDebug|testDebugUnitTest
+
+=== Community Files ===
+PASS: CONTRIBUTING.md
+PASS: .github/ISSUE_TEMPLATE/bug_report.md
+PASS: .github/ISSUE_TEMPLATE/feature_request.md
+PASS: .github/PULL_REQUEST_TEMPLATE.md
+
+=== GitHub Topics ===
+{"names":["ai","android","claude","cli","gemini","jetpack-compose","kotlin","opencode","termux"]}
+
+=== README ===
+badge count: 1
+"Build from Source" section: 1
+Title: # Agent Console (WIP removed)

@@ -1,4 +1,6 @@
-# Very early WIP Project, expect nothing - Agent Console
+# Agent Console
+
+[![Android CI](https://github.com/SynthNoirLabs/AgentConsole/actions/workflows/android.yml/badge.svg)](https://github.com/SynthNoirLabs/AgentConsole/actions/workflows/android.yml)
 
 Android app starter for running AI coding agents from a native Jetpack Compose UI via Termux.
 
@@ -26,6 +28,27 @@ Claude / Gemini / Codex / OpenCode CLI
 - Android 8.0+ (API 26)
 - [Termux](https://f-droid.org/packages/com.termux/) installed
 - At least one CLI agent installed inside Termux
+
+## Build from Source
+
+```bash
+# Clone
+git clone https://github.com/SynthNoirLabs/AgentConsole.git
+cd AgentConsole
+
+# Build debug APK (requires JDK 17)
+./gradlew assembleDebug
+
+# Run unit tests
+./gradlew testDebugUnitTest
+
+# Lint check
+./gradlew lintDebug
+```
+
+Output APK: `app/build/outputs/apk/debug/app-debug.apk`
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions.
 
 ## Quick Start
 
