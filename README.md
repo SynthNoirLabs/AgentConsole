@@ -1,4 +1,4 @@
-# Agent Console
+# Very early WIP Project, expect nothing - Agent Console
 
 Android app starter for running AI coding agents from a native Jetpack Compose UI via Termux.
 
