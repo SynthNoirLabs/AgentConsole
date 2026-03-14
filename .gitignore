@@ -9,3 +9,6 @@
 .cxx
 local.properties
 /app/build
+
+# Gradle wrapper jar must be committed (overrides global *.jar ignore)
+!gradle/wrapper/gradle-wrapper.jar
