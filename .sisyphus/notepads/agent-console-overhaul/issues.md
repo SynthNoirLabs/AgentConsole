@@ -7,3 +7,7 @@
 ## Task 3c - MainViewModel + ExecutionStore deletion (2026-03-13)
 - `lsp_diagnostics` still times out on Kotlin files (`initialize` timeout), so LSP clean checks could not be completed.
 - `./gradlew assembleDebug` and `./gradlew testDebugUnitTest` both fail in this shell with "Unable to locate a Java Runtime" from macOS stub Java.
+
+## Task 3d - MainActivity ViewModel wiring + TermuxRunner deletion (2026-03-13)
+- `lsp_diagnostics` for Kotlin still fails to initialize (`UnsatisfiedLinkError` loading `libfilewatcher_jni.dylib`), so LSP clean checks remain blocked in this environment.
+- `./gradlew assembleDebug` cannot run because no valid Java runtime is available and the detected `/Library/Java/JavaVirtualMachines/.../Contents/Home` symlink target is missing.

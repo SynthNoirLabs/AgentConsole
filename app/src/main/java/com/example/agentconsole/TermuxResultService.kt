@@ -17,7 +17,7 @@ class TermuxResultService : Service() {
         val resultBundle = intent?.getBundleExtra(TERMUX_SERVICE.EXTRA_PLUGIN_RESULT_BUNDLE)
         if (resultBundle == null) {
             Log.w(TAG, "No result bundle for execution #$executionId")
-            ExecutionStore.fail("No result bundle returned from Termux.")
+            ResultBus.fail("No result bundle returned from Termux.")
             stopSelf(startId)
             return START_NOT_STICKY
         }
@@ -31,7 +31,7 @@ class TermuxResultService : Service() {
         Log.d(TAG, "Execution #$executionId: exitCode=$exitCode, " +
             "stdout=${stdout.length} chars, stderr=${stderr.length} chars")
 
-        ExecutionStore.publishResult(
+        ResultBus.publishResult(
             executionId = executionId,
             stdout = stdout,
             stderr = stderr,

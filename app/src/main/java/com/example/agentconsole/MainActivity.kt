@@ -33,16 +33,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import dagger.hilt.android.AndroidEntryPoint
 
 private const val PREFS_NAME = "agent_console_prefs"
 private const val PREF_AGENT = "last_agent"
 private const val PREF_WORKDIR = "last_workdir"
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,7 +60,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AgentConsoleApp() {
     val context = LocalContext.current
-    val uiState by ExecutionStore.state.collectAsState()
+    val viewModel: MainViewModel = viewModel()
+    val uiState by viewModel.uiState.collectAsState()
+    val termuxRepository = remember { TermuxRepository() }
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
 
     var workingDir by rememberSaveable {
@@ -69,9 +74,9 @@ fun AgentConsoleApp() {
         val agent = Agent.entries.find { it.name == savedName } ?: Agent.CLAUDE
         mutableStateOf(agent)
     }
-    val termuxInstalled = remember { TermuxRunner.isTermuxInstalled(context) }
+    val termuxInstalled = remember { viewModel.checkTermuxInstalled(context) }
 
-    val workdirError = remember(workingDir) { TermuxRunner.validateWorkingDir(workingDir) }
+    val workdirError = remember(workingDir) { termuxRepository.validateWorkingDir(workingDir) }
     val promptError = remember(prompt) { if (prompt.isBlank()) "Prompt must not be empty." else null }
     val canRun = !uiState.isRunning && workdirError == null && promptError == null
 
@@ -127,8 +132,7 @@ fun AgentConsoleApp() {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(
                     onClick = {
-                        TermuxRunner.run(
-                            context = context,
+                        viewModel.run(
                             agent = selectedAgent,
                             prompt = prompt,
                             workingDir = workingDir
@@ -139,7 +143,7 @@ fun AgentConsoleApp() {
                     Text(if (uiState.isRunning) "Running\u2026" else "Run")
                 }
 
-                Button(onClick = { TermuxRunner.openTermux(context) }) {
+                Button(onClick = { termuxRepository.openTermux(context) }) {
                     Text("Open Termux")
                 }
             }

@@ -44,3 +44,13 @@
 ### Successful Approaches
 - Moving `ExecutionUiState` into `MainViewModel.kt` while keeping `TermuxRepository` and `TermuxResultService` on bus events allows incremental adoption without touching `MainActivity` in this step.
 - Replacing direct `ExecutionStore` writes in repository/service with `ResultBus` calls cleanly isolates side effects from state rendering concerns.
+
+## Task 3d - MainActivity ViewModel wiring + TermuxRunner deletion (2026-03-13)
+
+### Patterns / Conventions
+- Compose screen migration can use `val viewModel: MainViewModel = viewModel()` once `MainActivity` is annotated with `@AndroidEntryPoint`.
+- During staged refactors, UI helper actions (`openTermux`, `validateWorkingDir`) can temporarily call `TermuxRepository` while execution control shifts to ViewModel methods.
+
+### Successful Approaches
+- Replacing `ExecutionStore.state.collectAsState()` with `viewModel.uiState.collectAsState()` and swapping run/install calls to `viewModel.run` and `viewModel.checkTermuxInstalled` kept UI behavior intact.
+- Removing `TermuxRunner.kt` immediately after updating call sites exposed stale references early and kept migration scope clear.

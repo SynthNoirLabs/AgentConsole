@@ -8,14 +8,11 @@ import android.util.Log
 import com.termux.shared.termux.TermuxConstants
 import com.termux.shared.termux.TermuxConstants.TERMUX_APP.RUN_COMMAND_SERVICE
 import java.util.concurrent.atomic.AtomicInteger
+import javax.inject.Inject
 
-object TermuxRunner {
+class TermuxRepository @Inject constructor() {
 
-    private const val TAG = "TermuxRunner"
     private val nextExecutionId = AtomicInteger(1000)
-
-    /** Characters that are not allowed in working directory paths. */
-    private val DANGEROUS_PATH_CHARS = Regex("[;|&`$\\\\\"'<>(){}!#]")
 
     fun isTermuxInstalled(context: Context): Boolean {
         return try {
@@ -33,12 +30,8 @@ object TermuxRunner {
         }
     }
 
-    /**
-     * Validates the working directory path.
-     * Returns null if valid, or an error message if invalid.
-     */
     fun validateWorkingDir(workingDir: String): String? {
-        if (workingDir.isBlank()) return null // blank means default ~/
+        if (workingDir.isBlank()) return null
         if (DANGEROUS_PATH_CHARS.containsMatchIn(workingDir)) {
             return "Working directory contains invalid characters."
         }
@@ -51,28 +44,23 @@ object TermuxRunner {
         return null
     }
 
-    fun run(
-        context: Context,
-        agent: Agent,
-        prompt: String,
-        workingDir: String
-    ) {
+    fun runAgent(context: Context, agent: Agent, prompt: String, workingDir: String) {
         if (prompt.isBlank()) {
             Log.w(TAG, "Run rejected: empty prompt")
-            ExecutionStore.fail("Prompt is empty.")
+            ResultBus.fail("Prompt is empty.")
             return
         }
 
         val workdirError = validateWorkingDir(workingDir)
         if (workdirError != null) {
             Log.w(TAG, "Run rejected: $workdirError (input=$workingDir)")
-            ExecutionStore.fail(workdirError)
+            ResultBus.fail(workdirError)
             return
         }
 
         if (!isTermuxInstalled(context)) {
             Log.w(TAG, "Run rejected: Termux not installed")
-            ExecutionStore.fail("Termux is not installed.")
+            ResultBus.fail("Termux is not installed.")
             return
         }
 
@@ -114,19 +102,24 @@ object TermuxRunner {
             putExtra(RUN_COMMAND_SERVICE.EXTRA_PENDING_INTENT, pendingIntent)
         }
 
-        ExecutionStore.markRunning(executionId, agent.displayName, safeWorkdir)
+        ResultBus.markRunning(executionId, agent.displayName, safeWorkdir)
 
         try {
             context.startService(intent)
             Log.d(TAG, "Termux service started for execution #$executionId")
         } catch (e: SecurityException) {
             Log.e(TAG, "SecurityException starting Termux for execution #$executionId", e)
-            ExecutionStore.fail(
+            ResultBus.fail(
                 "Missing Termux permission. In Android Settings, grant this app 'Run commands in Termux environment', then enable allow-external-apps=true inside Termux."
             )
         } catch (e: Exception) {
             Log.e(TAG, "Exception starting Termux for execution #$executionId", e)
-            ExecutionStore.fail("Could not start Termux command: ${e.message}")
+            ResultBus.fail("Could not start Termux command: ${e.message}")
         }
+    }
+
+    companion object {
+        private const val TAG = "TermuxRepository"
+        private val DANGEROUS_PATH_CHARS = Regex("[;|&`$\\\\\"'<>(){}!#]")
     }
 }

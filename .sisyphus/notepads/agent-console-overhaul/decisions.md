@@ -7,3 +7,7 @@
 ## Task 3c - MainViewModel + ExecutionStore deletion (2026-03-13)
 - Implemented a `ResultBus` event object for Repository/Service -> ViewModel communication so `TermuxRepository` no longer depends directly on `ExecutionStore`.
 - Kept a temporary compatibility `ExecutionStore` object in `ResultBus.kt` because `MainActivity` and `TermuxRunner` are explicitly deferred to task 3d.
+
+## Task 3d - MainActivity ViewModel wiring + TermuxRunner deletion (2026-03-13)
+- Annotated `MainActivity` with `@AndroidEntryPoint` and switched `AgentConsoleApp` state/run/install calls to `MainViewModel` to complete UI-side migration from `ExecutionStore`/`TermuxRunner`.
+- Kept `openTermux` and `validateWorkingDir` as direct `TermuxRepository` calls in `MainActivity` for this step to avoid expanding `MainViewModel` API beyond the required migration scope.
