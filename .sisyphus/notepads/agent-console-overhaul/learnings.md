@@ -54,3 +54,32 @@
 ### Successful Approaches
 - Replacing `ExecutionStore.state.collectAsState()` with `viewModel.uiState.collectAsState()` and swapping run/install calls to `viewModel.run` and `viewModel.checkTermuxInstalled` kept UI behavior intact.
 - Removing `TermuxRunner.kt` immediately after updating call sites exposed stale references early and kept migration scope clear.
+
+## Task 4: Robustness features (output truncation, prompt validation, foreground service, battery warning)
+
+### Output truncation
+- Added `truncateOutput(raw, label)` static helper in `TermuxRepository.companion`
+- Converts to UTF-8 bytes, truncates to MAX_OUTPUT_SIZE (50*1024), appends "[...truncated — N bytes total in <label>]"
+- Called in `MainViewModel.publishResult()` before storing in UiState
+
+### Prompt validation
+- Added null-byte check (`\u0000`) and 10KB max size in both `TermuxRepository.runAgent()` AND `MainViewModel.run()` (belt-and-suspenders)
+- UI `promptError` in `AgentConsoleApp` also now validates null bytes and size, showing error inline
+
+### Foreground service
+- `TermuxRepository.runAgent()` uses `PendingIntent.getForegroundService()` for API 26+ (Build.VERSION_CODES.O), falls back to `getService()` for older
+- `TermuxResultService` now calls `startForeground()` in `onCreate()` with a minimal low-priority notification
+- Notification channel `agent_result_channel` created on O+ with IMPORTANCE_LOW
+
+### Battery optimization warning
+- In `AgentConsoleApp`, `batteryOptimized` is computed via `PowerManager.isIgnoringBatteryOptimizations(packageName)`; true means NOT exempt (i.e., still optimized)
+- Passed to `StatusCard` and shown as error-colored warning text when `batteryOptimized == true`
+
+### Manifest changes
+- Added `FOREGROUND_SERVICE` permission (normal permission, automatically granted)
+- Added `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` permission
+- `TermuxResultService` now has `android:foregroundServiceType="dataSync"`
+
+### Pitfalls
+- Edit tool gotcha: replacing a blank line `\n` with actual content required a single-line replace directly on the blank line's tag
+- `batteryOptimized` was briefly missing its closing `}` for the `remember { }` lambda — fixed by a targeted single-line replace

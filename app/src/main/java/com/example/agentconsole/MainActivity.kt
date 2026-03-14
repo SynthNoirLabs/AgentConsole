@@ -6,6 +6,15 @@ import android.os.Bundle
 import android.os.PowerManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import com.example.agentconsole.ui.navigation.AgentConsoleNavGraph
+import com.example.agentconsole.ui.theme.AgentConsoleTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -52,15 +61,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
-                AgentConsoleApp()
+            AgentConsoleTheme {
+                AgentConsoleNavGraph()
             }
         }
     }
 }
 
 @Composable
-fun AgentConsoleApp() {
+fun AgentConsoleApp(onNavigateToHistory: () -> Unit = {}) {
     val context = LocalContext.current
     val viewModel: MainViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsState()
@@ -84,7 +93,7 @@ fun AgentConsoleApp() {
         } else {
             false
         }
-
+    }
     val workdirError = remember(workingDir) { termuxRepository.validateWorkingDir(workingDir) }
     val promptError = remember(prompt) {
         when {
@@ -97,9 +106,28 @@ fun AgentConsoleApp() {
     }
     val canRun = !uiState.isRunning && workdirError == null && promptError == null
 
+    val dirPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        uri?.let {
+            // Convert URI to a path string. This is a simplified approach.
+            // In a real app, you might need to resolve the actual path or use the URI directly.
+            val path = it.path?.replace("/tree/primary:", "/sdcard/") ?: it.toString()
+            workingDir = path
+            prefs.edit().putString(PREF_WORKDIR, path).apply()
+        }
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Agent Console") })
+            TopAppBar(
+                title = { Text("Agent Console") },
+                actions = {
+                    IconButton(onClick = onNavigateToHistory) {
+                        Icon(Icons.Default.History, contentDescription = "History")
+                    }
+                }
+            )
         }
     ) { padding ->
         Column(
@@ -132,7 +160,12 @@ fun AgentConsoleApp() {
                 },
                 isError = workdirError != null,
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                trailingIcon = {
+                    IconButton(onClick = { dirPickerLauncher.launch(null) }) {
+                        Icon(Icons.Default.Folder, contentDescription = "Pick Directory")
+                    }
+                }
             )
 
             OutlinedTextField(
