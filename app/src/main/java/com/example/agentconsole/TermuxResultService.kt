@@ -1,12 +1,22 @@
 package com.example.agentconsole
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import com.termux.shared.termux.TermuxConstants.TERMUX_APP.TERMUX_SERVICE
 
 class TermuxResultService : Service() {
+
+    override fun onCreate() {
+        super.onCreate()
+        createNotificationChannelIfNeeded()
+        startForeground(NOTIFICATION_ID, buildForegroundNotification())
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -44,8 +54,42 @@ class TermuxResultService : Service() {
         return START_NOT_STICKY
     }
 
+    private fun createNotificationChannelIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                NOTIFICATION_CHANNEL_ID,
+                "Agent Execution",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Shown while an agent command result is being processed."
+                setShowBadge(false)
+            }
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun buildForegroundNotification(): Notification {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(this, NOTIFICATION_CHANNEL_ID)
+                .setContentTitle("Agent Console")
+                .setContentText("Processing agent result\u2026")
+                .setSmallIcon(android.R.drawable.ic_popup_sync)
+                .build()
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(this)
+                .setContentTitle("Agent Console")
+                .setContentText("Processing agent result\u2026")
+                .setSmallIcon(android.R.drawable.ic_popup_sync)
+                .build()
+        }
+    }
+
     companion object {
         private const val TAG = "TermuxResultService"
         const val EXTRA_EXECUTION_ID = "execution_id"
+        const val NOTIFICATION_CHANNEL_ID = "agent_result_channel"
+        private const val NOTIFICATION_ID = 1001
     }
 }

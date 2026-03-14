@@ -4,6 +4,7 @@ kotlin = "2.0.20"
 compose-compiler = "2.0.20"
 hilt = "2.51.1"
 ksp = "2.0.20-1.0.25"
+room = "2.6.1"
 androidx-core-ktx = "1.13.1"
 androidx-lifecycle-runtime-ktx = "2.8.4"
 androidx-activity-compose = "1.9.1"
@@ -11,6 +12,8 @@ compose-bom = "2024.09.00"
 termux-shared = "0.118.3"
 guava-listenablefuture = "9999.0-empty-to-avoid-conflict-with-guava"
 junit4 = "4.13.2"
+robolectric = "4.12.2"
+androidx-test-core = "1.6.1"
 kotlinx-coroutines-test = "1.8.1"
 material = "1.12.0"
 
@@ -28,8 +31,17 @@ androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-
 termux-shared = { group = "com.termux.termux-app", name = "termux-shared", version.ref = "termux-shared" }
 guava-listenablefuture = { group = "com.google.guava", name = "listenablefuture", version.ref = "guava-listenablefuture" }
 junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidx-test-core" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test" }
 google-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
+hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
+hilt-android-testing = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "hilt" }
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

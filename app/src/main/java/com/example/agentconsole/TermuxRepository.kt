@@ -50,6 +50,16 @@ class TermuxRepository @Inject constructor() {
             ResultBus.fail("Prompt is empty.")
             return
         }
+        if (prompt.contains('\u0000')) {
+            Log.w(TAG, "Run rejected: prompt contains null bytes")
+            ResultBus.fail("Prompt must not contain null bytes.")
+            return
+        }
+        if (prompt.toByteArray(Charsets.UTF_8).size > MAX_PROMPT_SIZE) {
+            Log.w(TAG, "Run rejected: prompt exceeds ${MAX_PROMPT_SIZE / 1024}KB")
+            ResultBus.fail("Prompt exceeds maximum allowed size (${MAX_PROMPT_SIZE / 1024}KB).")
+            return
+        }
 
         val workdirError = validateWorkingDir(workingDir)
         if (workdirError != null) {
@@ -76,12 +86,21 @@ class TermuxRepository @Inject constructor() {
         val pendingIntentFlags = PendingIntent.FLAG_ONE_SHOT or
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
 
-        val pendingIntent = PendingIntent.getService(
-            context,
-            executionId,
-            resultIntent,
-            pendingIntentFlags
-        )
+        val pendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            PendingIntent.getForegroundService(
+                context,
+                executionId,
+                resultIntent,
+                pendingIntentFlags
+            )
+        } else {
+            PendingIntent.getService(
+                context,
+                executionId,
+                resultIntent,
+                pendingIntentFlags
+            )
+        }
 
         val intent = Intent().apply {
             setClassName(
@@ -121,5 +140,17 @@ class TermuxRepository @Inject constructor() {
     companion object {
         private const val TAG = "TermuxRepository"
         private val DANGEROUS_PATH_CHARS = Regex("[;|&`$\\\\\"'<>(){}!#]")
+        const val MAX_OUTPUT_SIZE = 50 * 1024 // 50 KB
+        const val MAX_PROMPT_SIZE = 10 * 1024 // 10 KB
+
+        fun truncateOutput(raw: String, label: String): String {
+            val bytes = raw.toByteArray(Charsets.UTF_8)
+            return if (bytes.size <= MAX_OUTPUT_SIZE) {
+                raw
+            } else {
+                val truncated = String(bytes, 0, MAX_OUTPUT_SIZE, Charsets.UTF_8)
+                "$truncated\n[...truncated \u2014 ${bytes.size} bytes total in $label]"
+            }
+        }
     }
 }

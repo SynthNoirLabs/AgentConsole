@@ -1,7 +1,9 @@
 package com.example.agentconsole
 
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -75,9 +77,24 @@ fun AgentConsoleApp() {
         mutableStateOf(agent)
     }
     val termuxInstalled = remember { viewModel.checkTermuxInstalled(context) }
+    val batteryOptimized = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+            !pm.isIgnoringBatteryOptimizations(context.packageName)
+        } else {
+            false
+        }
 
     val workdirError = remember(workingDir) { termuxRepository.validateWorkingDir(workingDir) }
-    val promptError = remember(prompt) { if (prompt.isBlank()) "Prompt must not be empty." else null }
+    val promptError = remember(prompt) {
+        when {
+            prompt.isBlank() -> "Prompt must not be empty."
+            prompt.contains('\u0000') -> "Prompt must not contain null bytes."
+            prompt.toByteArray(Charsets.UTF_8).size > TermuxRepository.MAX_PROMPT_SIZE ->
+                "Prompt exceeds maximum allowed size (${TermuxRepository.MAX_PROMPT_SIZE / 1024}KB)."
+            else -> null
+        }
+    }
     val canRun = !uiState.isRunning && workdirError == null && promptError == null
 
     Scaffold(
@@ -93,7 +110,7 @@ fun AgentConsoleApp() {
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            StatusCard(termuxInstalled = termuxInstalled, uiState = uiState)
+            StatusCard(termuxInstalled = termuxInstalled, uiState = uiState, batteryOptimized = batteryOptimized)
 
             AgentDropdown(
                 selectedAgent = selectedAgent,
@@ -169,7 +186,7 @@ fun AgentConsoleApp() {
 }
 
 @Composable
-fun StatusCard(termuxInstalled: Boolean, uiState: ExecutionUiState) {
+fun StatusCard(termuxInstalled: Boolean, uiState: ExecutionUiState, batteryOptimized: Boolean = false) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Setup checklist", style = MaterialTheme.typography.titleMedium)
@@ -177,6 +194,16 @@ fun StatusCard(termuxInstalled: Boolean, uiState: ExecutionUiState) {
             Text("\u2022 Grant this app: Run commands in Termux environment")
             Text("\u2022 In Termux set: allow-external-apps=true")
             Text("\u2022 Put your repo somewhere Termux can reach")
+            if (batteryOptimized) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "\u26a0\ufe0f Battery optimization is enabled for this app. " +
+                        "Background commands may be killed. " +
+                        "Disable in Settings \u2192 Apps \u2192 Agent Console \u2192 Battery.",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Text("Status: ${uiState.status}")
             if (uiState.activeAgent.isNotBlank()) Text("Agent: ${uiState.activeAgent}")

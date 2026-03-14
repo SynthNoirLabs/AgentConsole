@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.agentconsole.data.ExecutionHistory
+import com.example.agentconsole.data.ExecutionHistoryDao
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -29,11 +31,13 @@ data class ExecutionUiState(
 @HiltViewModel
 class MainViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
-    private val repository: TermuxRepository
+    private val repository: TermuxRepository,
+    private val executionHistoryDao: ExecutionHistoryDao
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExecutionUiState())
     val uiState: StateFlow<ExecutionUiState> = _uiState.asStateFlow()
+    private var lastPrompt: String = ""
 
     init {
         viewModelScope.launch {
@@ -67,7 +71,16 @@ class MainViewModel @Inject constructor(
             fail("Prompt is empty.")
             return
         }
+        if (prompt.contains('\u0000')) {
+            fail("Prompt must not contain null bytes.")
+            return
+        }
+        if (prompt.toByteArray(Charsets.UTF_8).size > TermuxRepository.MAX_PROMPT_SIZE) {
+            fail("Prompt exceeds maximum allowed size (${TermuxRepository.MAX_PROMPT_SIZE / 1024}KB).")
+            return
+        }
 
+        lastPrompt = prompt
         val workdirError = repository.validateWorkingDir(workingDir)
         if (workdirError != null) {
             fail(workdirError)
@@ -116,15 +129,37 @@ class MainViewModel @Inject constructor(
         }
 
         Log.d(TAG, "publishResult: executionId=$executionId, exitCode=$exitCode")
+        val status = if (exitCode == 0 && internalErrorCode == -1) "Finished" else "Finished with errors"
+        val truncatedStdout = TermuxRepository.truncateOutput(stdout, "stdout")
+        val truncatedStderr = TermuxRepository.truncateOutput(stderr, "stderr")
         _uiState.value = current.copy(
-            status = if (exitCode == 0 && internalErrorCode == -1) "Finished" else "Finished with errors",
-            stdout = stdout,
-            stderr = stderr,
+            status = status,
+            stdout = truncatedStdout,
+            stderr = truncatedStderr,
             exitCode = exitCode,
             internalErrorCode = internalErrorCode,
             internalErrorMessage = internalErrorMessage,
             isRunning = false
         )
+
+        viewModelScope.launch {
+            try {
+                executionHistoryDao.insert(
+                    ExecutionHistory.fromExecution(
+                        agent = current.activeAgent,
+                        workingDir = current.workingDir,
+                        prompt = lastPrompt,
+                        stdout = stdout,
+                        stderr = stderr,
+                        exitCode = exitCode,
+                        status = status,
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to save execution history for execution #$executionId", e)
+            }
+        }
     }
 
     fun fail(message: String) {
