@@ -1,5 +1,7 @@
 package com.example.agentconsole
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import com.example.agentconsole.data.ExecutionHistory
 import com.example.agentconsole.data.ExecutionHistoryDao
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +19,12 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class MainViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
@@ -29,7 +36,7 @@ class MainViewModelTest {
         Dispatchers.setMain(testDispatcher)
         fakeExecutionHistoryDao = FakeExecutionHistoryDao()
         viewModel = MainViewModel(
-            appContext = null as android.content.Context,
+            appContext = ApplicationProvider.getApplicationContext<Context>(),
             repository = TermuxRepository(),
             executionHistoryDao = fakeExecutionHistoryDao
         )
