@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Agent Console</string>
+    <string name="label_agent_console">Agent Console</string>
+    <string name="label_open_termux">Open Termux</string>
+    <string name="label_run">Run</string>
+</resources>

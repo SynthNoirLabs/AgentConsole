@@ -1,0 +1,18 @@
+=== QA 1: Default branch ===
+main
+
+=== QA 2: Review branch commit present ===
+548c96d fix: harden security, add validation, logging, persistence, and tests
+
+=== QA 3: Remote branches ===
+  origin/main
+
+=== QA 4: proguard-rules.pro ===
+      44 app/proguard-rules.pro
+
+=== QA 5: git log main ===
+b2263d2 chore: add ProGuard rules for Compose and Termux
+6db8498 Merge remote-tracking branch 'origin/claude/review-repo-Z3MM8'
+ebedd94 Update README.md
+548c96d fix: harden security, add validation, logging, persistence, and tests
+6f911bc feat: initial Agent Console Android app starter
