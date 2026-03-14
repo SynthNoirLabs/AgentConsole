@@ -96,6 +96,16 @@ chmod +x ~/bin/agent_runner.sh
 
 stdout/stderr will appear in the app once the command completes.
 
+## Architecture
+
+Agent Console follows **MVVM** with unidirectional data flow:
+
+- **Hilt** — dependency injection via `@HiltAndroidApp` / `@HiltViewModel`
+- **ViewModel + StateFlow** — `MainViewModel` owns all UI state; no logic in Composables
+- **Room** — local persistence for execution history (`AppDatabase`, DAOs)
+- **Compose Navigation** — single-activity, multi-screen nav via `NavGraph.kt`
+- **ResultBus** — `SharedFlow` bridge that forwards Termux broadcast results from `TermuxResultService` into the ViewModel
+
 ## File Structure
 
 ```
@@ -103,23 +113,48 @@ app/
   src/main/
     AndroidManifest.xml
     java/com/example/agentconsole/
-      Agent.kt              # Agent enum (Claude, Gemini, Codex, OpenCode)
-      ExecutionStore.kt     # Reactive state holder (StateFlow)
-      MainActivity.kt       # Compose UI
-      TermuxResultService.kt # Receives results from Termux
-      TermuxRunner.kt       # Sends RUN_COMMAND intents to Termux
+      AgentConsoleApplication.kt   # @HiltAndroidApp entry point
+      MainActivity.kt              # Single Compose activity
+      MainViewModel.kt             # StateFlow-based ViewModel
+      TermuxRunner.kt              # Sends RUN_COMMAND intents to Termux
+      TermuxResultService.kt       # Receives broadcast results from Termux
+      TermuxRepository.kt          # Injectable repository layer
+      ResultBus.kt                 # Service → ViewModel SharedFlow bridge
+      Agent.kt                     # Agent enum (Claude, Gemini, Codex, OpenCode)
+      di/
+        AppModule.kt               # Hilt module – binds repository & DB
+      data/
+        ExecutionHistory.kt        # Room entity
+        ExecutionHistoryDao.kt     # DAO interface
+        AppDatabase.kt             # Room database
+      ui/
+        theme/
+          Theme.kt                 # Material3 light/dark theming
+        navigation/
+          NavGraph.kt              # Compose Navigation graph
+        history/
+          HistoryScreen.kt         # Execution history screen
+          HistoryViewModel.kt      # ViewModel for history screen
 scripts/
-  agent_runner.sh           # Termux helper that dispatches to the right CLI
+  agent_runner.sh                  # Termux helper that dispatches to the right CLI
 settings.gradle.kts
 app/build.gradle.kts
 ```
 
-## What to Add Next
+## Status
 
-- Repo picker with SAF / DocumentFile
-- Execution history screen
-- Streaming output via Termux sessions
-- Theme / dark mode support
+| Feature | State |
+|---------|-------|
+| Execution history screen | ✅ Done |
+| Theme / dark mode support | ✅ Done |
+| Directory picker with SAF | ✅ Done |
+| Output truncation and validation | ✅ Done |
+| CI/CD pipeline | ✅ Done |
+| Streaming output via Termux sessions | ⬜ Future |
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, code style, and PR guidelines.
 
 ## License
 
