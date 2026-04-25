@@ -2,6 +2,7 @@ package com.example.agentconsole
 
 import android.content.Context
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,7 +14,6 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 data class ExecutionUiState(
@@ -80,7 +80,14 @@ class MainViewModel @Inject constructor(
     fun openTermux(context: Context) = repository.openTermux(context)
 
     fun run(agent: Agent, prompt: String, workingDir: String) {
-        lastPrompt = prompt
+        // Persist only inputs that pass validation so a restored process never
+        // resurfaces an invalid prompt. The repository re-validates and emits
+        // Failed via the bus; this is intentional defense-in-depth.
+        if (repository.validatePrompt(prompt) == null &&
+            repository.validateWorkingDir(workingDir) == null
+        ) {
+            lastPrompt = prompt
+        }
         repository.runAgent(
             context = appContext,
             agent = agent,
@@ -93,7 +100,8 @@ class MainViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(historyError = null)
     }
 
-    fun markRunning(executionId: Int, agent: String, workingDir: String) {
+    @VisibleForTesting
+    internal fun markRunning(executionId: Int, agent: String, workingDir: String) {
         Log.d(TAG, "markRunning: executionId=$executionId, agent=$agent, workdir=$workingDir")
         savedStateHandle[KEY_LAST_EXECUTION_ID] = executionId
         savedStateHandle[KEY_ACTIVE_AGENT] = agent
@@ -107,7 +115,8 @@ class MainViewModel @Inject constructor(
         )
     }
 
-    fun publishResult(
+    @VisibleForTesting
+    internal fun publishResult(
         executionId: Int,
         stdout: String,
         stderr: String,
@@ -127,6 +136,10 @@ class MainViewModel @Inject constructor(
 
         Log.d(TAG, "publishResult: executionId=$executionId, exitCode=$exitCode")
         val status = if (exitCode == 0 && internalErrorCode == -1) "Finished" else "Finished with errors"
+        // Live UI uses a generous byte-bounded truncation (50 KB) so the user
+        // sees as much output as is practical for the current run; history
+        // applies a smaller char-bounded truncation in ExecutionHistory.fromExecution
+        // because the row is stored long-term. Both are marked when trimmed.
         val truncatedStdout = TermuxRepository.truncateOutput(stdout, "stdout")
         val truncatedStderr = TermuxRepository.truncateOutput(stderr, "stderr")
         clearInFlightState()
@@ -163,7 +176,8 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun fail(message: String) {
+    @VisibleForTesting
+    internal fun fail(message: String) {
         Log.w(TAG, "fail: $message")
         clearInFlightState()
         _uiState.value = _uiState.value.copy(
