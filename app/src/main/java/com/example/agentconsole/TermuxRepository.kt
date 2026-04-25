@@ -9,8 +9,12 @@ import com.termux.shared.termux.TermuxConstants
 import com.termux.shared.termux.TermuxConstants.TERMUX_APP.RUN_COMMAND_SERVICE
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
+import javax.inject.Singleton
 
-class TermuxRepository @Inject constructor() {
+@Singleton
+class TermuxRepository @Inject constructor(
+    private val resultBus: ResultBus
+) {
 
     private val nextExecutionId = AtomicInteger(1000)
 
@@ -44,33 +48,31 @@ class TermuxRepository @Inject constructor() {
         return null
     }
 
-    fun runAgent(context: Context, agent: Agent, prompt: String, workingDir: String) {
-        if (prompt.isBlank()) {
-            Log.w(TAG, "Run rejected: empty prompt")
-            ResultBus.fail("Prompt is empty.")
-            return
-        }
-        if (prompt.contains('\u0000')) {
-            Log.w(TAG, "Run rejected: prompt contains null bytes")
-            ResultBus.fail("Prompt must not contain null bytes.")
-            return
-        }
+    fun validatePrompt(prompt: String): String? {
+        if (prompt.isBlank()) return "Prompt is empty."
+        if (prompt.contains('\u0000')) return "Prompt must not contain null bytes."
         if (prompt.toByteArray(Charsets.UTF_8).size > MAX_PROMPT_SIZE) {
-            Log.w(TAG, "Run rejected: prompt exceeds ${MAX_PROMPT_SIZE / 1024}KB")
-            ResultBus.fail("Prompt exceeds maximum allowed size (${MAX_PROMPT_SIZE / 1024}KB).")
+            return "Prompt exceeds maximum allowed size (${MAX_PROMPT_SIZE / 1024}KB)."
+        }
+        return null
+    }
+
+    fun runAgent(context: Context, agent: Agent, prompt: String, workingDir: String) {
+        validatePrompt(prompt)?.let { error ->
+            Log.w(TAG, "Run rejected: $error")
+            resultBus.fail(error)
             return
         }
 
-        val workdirError = validateWorkingDir(workingDir)
-        if (workdirError != null) {
-            Log.w(TAG, "Run rejected: $workdirError (input=$workingDir)")
-            ResultBus.fail(workdirError)
+        validateWorkingDir(workingDir)?.let { error ->
+            Log.w(TAG, "Run rejected: $error (input=$workingDir)")
+            resultBus.fail(error)
             return
         }
 
         if (!isTermuxInstalled(context)) {
             Log.w(TAG, "Run rejected: Termux not installed")
-            ResultBus.fail("Termux is not installed.")
+            resultBus.fail("Termux is not installed.")
             return
         }
 
@@ -121,19 +123,19 @@ class TermuxRepository @Inject constructor() {
             putExtra(RUN_COMMAND_SERVICE.EXTRA_PENDING_INTENT, pendingIntent)
         }
 
-        ResultBus.markRunning(executionId, agent.displayName, safeWorkdir)
+        resultBus.markRunning(executionId, agent.displayName, safeWorkdir)
 
         try {
             context.startService(intent)
             Log.d(TAG, "Termux service started for execution #$executionId")
         } catch (e: SecurityException) {
             Log.e(TAG, "SecurityException starting Termux for execution #$executionId", e)
-            ResultBus.fail(
+            resultBus.fail(
                 "Missing Termux permission. In Android Settings, grant this app 'Run commands in Termux environment', then enable allow-external-apps=true inside Termux."
             )
         } catch (e: Exception) {
             Log.e(TAG, "Exception starting Termux for execution #$executionId", e)
-            ResultBus.fail("Could not start Termux command: ${e.message}")
+            resultBus.fail("Could not start Termux command: ${e.message}")
         }
     }
 
@@ -149,7 +151,7 @@ class TermuxRepository @Inject constructor() {
                 raw
             } else {
                 val truncated = String(bytes, 0, MAX_OUTPUT_SIZE, Charsets.UTF_8)
-                "$truncated\n[...truncated \u2014 ${bytes.size} bytes total in $label]"
+                "$truncated\n[...truncated — ${bytes.size} bytes total in $label]"
             }
         }
     }

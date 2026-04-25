@@ -19,6 +19,7 @@ data class ExecutionHistory(
         const val MAX_PROMPT_CHARS = 500
         const val MAX_STDOUT_CHARS = 10 * 1024
         const val MAX_STDERR_CHARS = 5 * 1024
+        const val TRUNCATION_MARKER = "… [truncated]"
 
         fun fromExecution(
             agent: String,
@@ -33,13 +34,19 @@ data class ExecutionHistory(
             return ExecutionHistory(
                 agent = agent,
                 workingDir = workingDir,
-                prompt = prompt.take(MAX_PROMPT_CHARS),
-                stdout = stdout.take(MAX_STDOUT_CHARS),
-                stderr = stderr.take(MAX_STDERR_CHARS),
+                prompt = truncate(prompt, MAX_PROMPT_CHARS),
+                stdout = truncate(stdout, MAX_STDOUT_CHARS),
+                stderr = truncate(stderr, MAX_STDERR_CHARS),
                 exitCode = exitCode,
                 status = status,
                 timestamp = timestamp
             )
+        }
+
+        private fun truncate(value: String, max: Int): String {
+            if (value.length <= max) return value
+            val keep = (max - TRUNCATION_MARKER.length).coerceAtLeast(0)
+            return value.take(keep) + TRUNCATION_MARKER
         }
     }
 }

@@ -9,8 +9,13 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import com.termux.shared.termux.TermuxConstants.TERMUX_APP.TERMUX_SERVICE
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class TermuxResultService : Service() {
+
+    @Inject lateinit var resultBus: ResultBus
 
     override fun onCreate() {
         super.onCreate()
@@ -27,7 +32,7 @@ class TermuxResultService : Service() {
         val resultBundle = intent?.getBundleExtra(TERMUX_SERVICE.EXTRA_PLUGIN_RESULT_BUNDLE)
         if (resultBundle == null) {
             Log.w(TAG, "No result bundle for execution #$executionId")
-            ResultBus.fail("No result bundle returned from Termux.")
+            resultBus.fail("No result bundle returned from Termux.")
             stopSelf(startId)
             return START_NOT_STICKY
         }
@@ -41,7 +46,7 @@ class TermuxResultService : Service() {
         Log.d(TAG, "Execution #$executionId: exitCode=$exitCode, " +
             "stdout=${stdout.length} chars, stderr=${stderr.length} chars")
 
-        ResultBus.publishResult(
+        resultBus.publishResult(
             executionId = executionId,
             stdout = stdout,
             stderr = stderr,
@@ -73,14 +78,14 @@ class TermuxResultService : Service() {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(this, NOTIFICATION_CHANNEL_ID)
                 .setContentTitle("Agent Console")
-                .setContentText("Processing agent result\u2026")
+                .setContentText("Processing agent result…")
                 .setSmallIcon(android.R.drawable.ic_popup_sync)
                 .build()
         } else {
             @Suppress("DEPRECATION")
             Notification.Builder(this)
                 .setContentTitle("Agent Console")
-                .setContentText("Processing agent result\u2026")
+                .setContentText("Processing agent result…")
                 .setSmallIcon(android.R.drawable.ic_popup_sync)
                 .build()
         }
