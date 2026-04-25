@@ -332,7 +332,7 @@ fun OutputCard(title: String, value: String) {
 private fun isBatteryOptimized(context: Context): Boolean {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
         val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-        !pm.isIgnoringBatteryOptimizations(context.packageName)
+        pm.isIgnoringBatteryOptimizations(context.packageName).not()
     } else {
         false
     }

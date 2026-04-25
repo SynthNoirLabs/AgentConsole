@@ -41,7 +41,10 @@ class MainViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(restoreInitialState())
     val uiState: StateFlow<ExecutionUiState> = _uiState.asStateFlow()
-    private var lastPrompt: String = savedStateHandle.get<String>(KEY_LAST_PROMPT).orEmpty()
+
+    private var lastPrompt: String
+        get() = savedStateHandle.get<String>(KEY_LAST_PROMPT).orEmpty()
+        set(value) { savedStateHandle[KEY_LAST_PROMPT] = value }
 
     init {
         viewModelScope.launch {
@@ -78,7 +81,6 @@ class MainViewModel @Inject constructor(
 
     fun run(agent: Agent, prompt: String, workingDir: String) {
         lastPrompt = prompt
-        savedStateHandle[KEY_LAST_PROMPT] = prompt
         repository.runAgent(
             context = appContext,
             agent = agent,
