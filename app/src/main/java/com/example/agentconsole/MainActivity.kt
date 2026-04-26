@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Icon
@@ -28,6 +29,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -38,23 +40,28 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.Alignment
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
 
 private const val PREFS_NAME = "agent_console_prefs"
 private const val PREF_AGENT = "last_agent"
 private const val PREF_WORKDIR = "last_workdir"
+private const val PREFS_DEBOUNCE_MS = 500L
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -71,9 +78,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AgentConsoleApp(onNavigateToHistory: () -> Unit = {}) {
     val context = LocalContext.current
-    val viewModel: MainViewModel = viewModel()
+    val viewModel: MainViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsState()
-    val termuxRepository = remember { TermuxRepository() }
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
 
     var workingDir by rememberSaveable {
@@ -85,25 +91,22 @@ fun AgentConsoleApp(onNavigateToHistory: () -> Unit = {}) {
         val agent = Agent.entries.find { it.name == savedName } ?: Agent.CLAUDE
         mutableStateOf(agent)
     }
-    val termuxInstalled = remember { viewModel.checkTermuxInstalled(context) }
-    val batteryOptimized = remember {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-            pm.isIgnoringBatteryOptimizations(context.packageName).not()
-        } else {
-            false
-        }
+    var termuxInstalled by remember { mutableStateOf(viewModel.isTermuxInstalled()) }
+    var batteryOptimized by remember { mutableStateOf(isBatteryOptimized(context)) }
+
+    LifecycleResumeEffect(Unit) {
+        termuxInstalled = viewModel.isTermuxInstalled()
+        batteryOptimized = isBatteryOptimized(context)
+        onPauseOrDispose { }
     }
-    val workdirError = remember(workingDir) { termuxRepository.validateWorkingDir(workingDir) }
-    val promptError = remember(prompt) {
-        when {
-            prompt.isBlank() -> "Prompt must not be empty."
-            prompt.contains('\u0000') -> "Prompt must not contain null bytes."
-            prompt.toByteArray(Charsets.UTF_8).size > TermuxRepository.MAX_PROMPT_SIZE ->
-                "Prompt exceeds maximum allowed size (${TermuxRepository.MAX_PROMPT_SIZE / 1024}KB)."
-            else -> null
-        }
+
+    LaunchedEffect(workingDir) {
+        delay(PREFS_DEBOUNCE_MS)
+        prefs.edit().putString(PREF_WORKDIR, workingDir).apply()
     }
+
+    val workdirError = remember(workingDir) { viewModel.validateWorkingDir(workingDir) }
+    val promptError = remember(prompt) { viewModel.validatePrompt(prompt) }
     val canRun = !uiState.isRunning && workdirError == null && promptError == null
 
     val dirPickerLauncher = rememberLauncherForActivityResult(
@@ -114,7 +117,6 @@ fun AgentConsoleApp(onNavigateToHistory: () -> Unit = {}) {
             // In a real app, you might need to resolve the actual path or use the URI directly.
             val path = it.path?.replace("/tree/primary:", "/sdcard/") ?: it.toString()
             workingDir = path
-            prefs.edit().putString(PREF_WORKDIR, path).apply()
         }
     }
 
@@ -140,6 +142,10 @@ fun AgentConsoleApp(onNavigateToHistory: () -> Unit = {}) {
         ) {
             StatusCard(termuxInstalled = termuxInstalled, uiState = uiState, batteryOptimized = batteryOptimized)
 
+            uiState.historyError?.let { error ->
+                HistoryErrorBanner(error = error, onDismiss = { viewModel.dismissHistoryError() })
+            }
+
             AgentDropdown(
                 selectedAgent = selectedAgent,
                 onSelected = {
@@ -150,10 +156,7 @@ fun AgentConsoleApp(onNavigateToHistory: () -> Unit = {}) {
 
             OutlinedTextField(
                 value = workingDir,
-                onValueChange = {
-                    workingDir = it
-                    prefs.edit().putString(PREF_WORKDIR, it).apply()
-                },
+                onValueChange = { workingDir = it },
                 label = { Text("Repo / working directory") },
                 supportingText = {
                     Text(workdirError ?: "Examples: ~/projects/myrepo or /sdcard/Download/myrepo")
@@ -190,10 +193,10 @@ fun AgentConsoleApp(onNavigateToHistory: () -> Unit = {}) {
                     },
                     enabled = canRun
                 ) {
-                    Text(if (uiState.isRunning) "Running\u2026" else "Run")
+                    Text(if (uiState.isRunning) "Running…" else "Run")
                 }
 
-                Button(onClick = { termuxRepository.openTermux(context) }) {
+                Button(onClick = { viewModel.openTermux(context) }) {
                     Text("Open Termux")
                 }
             }
@@ -223,16 +226,16 @@ fun StatusCard(termuxInstalled: Boolean, uiState: ExecutionUiState, batteryOptim
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Setup checklist", style = MaterialTheme.typography.titleMedium)
-            Text("\u2022 Termux installed: ${if (termuxInstalled) "yes" else "no"}")
-            Text("\u2022 Grant this app: Run commands in Termux environment")
-            Text("\u2022 In Termux set: allow-external-apps=true")
-            Text("\u2022 Put your repo somewhere Termux can reach")
+            Text("• Termux installed: ${if (termuxInstalled) "yes" else "no"}")
+            Text("• Grant this app: Run commands in Termux environment")
+            Text("• In Termux set: allow-external-apps=true")
+            Text("• Put your repo somewhere Termux can reach")
             if (batteryOptimized) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "\u26a0\ufe0f Battery optimization is enabled for this app. " +
+                    "⚠️ Battery optimization is enabled for this app. " +
                         "Background commands may be killed. " +
-                        "Disable in Settings \u2192 Apps \u2192 Agent Console \u2192 Battery.",
+                        "Disable in Settings → Apps → Agent Console → Battery.",
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -243,6 +246,34 @@ fun StatusCard(termuxInstalled: Boolean, uiState: ExecutionUiState, batteryOptim
             if (uiState.workingDir.isNotBlank()) Text("Working dir: ${uiState.workingDir}")
             uiState.exitCode?.let { Text("Exit code: $it") }
             uiState.internalErrorCode?.let { Text("Termux internal err: $it") }
+        }
+    }
+}
+
+@Composable
+fun HistoryErrorBanner(error: String, onDismiss: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = onDismiss) {
+                Icon(Icons.Default.Close, contentDescription = "Dismiss")
+            }
         }
     }
 }
@@ -295,5 +326,14 @@ fun OutputCard(title: String, value: String) {
                 style = MaterialTheme.typography.bodyMedium
             )
         }
+    }
+}
+
+private fun isBatteryOptimized(context: Context): Boolean {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        pm.isIgnoringBatteryOptimizations(context.packageName).not()
+    } else {
+        false
     }
 }

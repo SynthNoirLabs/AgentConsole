@@ -126,9 +126,36 @@ class ExecutionHistoryDaoTest {
         assertEquals(ExecutionHistory.MAX_PROMPT_CHARS, stored.prompt.length)
         assertEquals(ExecutionHistory.MAX_STDOUT_CHARS, stored.stdout.length)
         assertEquals(ExecutionHistory.MAX_STDERR_CHARS, stored.stderr.length)
+        assertTrue(stored.prompt.endsWith(ExecutionHistory.TRUNCATION_MARKER))
+        assertTrue(stored.stdout.endsWith(ExecutionHistory.TRUNCATION_MARKER))
+        assertTrue(stored.stderr.endsWith(ExecutionHistory.TRUNCATION_MARKER))
         assertEquals(1, stored.exitCode)
         assertEquals("Finished with errors", stored.status)
         assertEquals(3_000L, stored.timestamp)
         assertTrue(stored.id > 0)
+    }
+
+    @Test
+    fun `getRecent caps and orders results`() = runTest {
+        repeat(5) { i ->
+            dao.insert(
+                ExecutionHistory.fromExecution(
+                    agent = "Claude Code",
+                    workingDir = "~/repo",
+                    prompt = "p$i",
+                    stdout = "",
+                    stderr = "",
+                    exitCode = 0,
+                    status = "Finished",
+                    timestamp = (i + 1) * 100L
+                )
+            )
+        }
+
+        val recent = dao.getRecent(limit = 3).first()
+        assertEquals(3, recent.size)
+        assertEquals("p4", recent[0].prompt)
+        assertEquals("p3", recent[1].prompt)
+        assertEquals("p2", recent[2].prompt)
     }
 }

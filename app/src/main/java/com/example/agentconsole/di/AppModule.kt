@@ -2,7 +2,6 @@ package com.example.agentconsole.di
 
 import android.content.Context
 import androidx.room.Room
-import com.example.agentconsole.TermuxRepository
 import com.example.agentconsole.data.AppDatabase
 import com.example.agentconsole.data.ExecutionHistoryDao
 import dagger.Module
@@ -15,12 +14,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
-
-    @Provides
-    @Singleton
-    fun provideTermuxRepository(): TermuxRepository {
-        return TermuxRepository()
-    }
 
     @Provides
     @Singleton
