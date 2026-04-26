@@ -1,9 +1,9 @@
-package com.example.agentconsole
+package com.synthnoirlabs.agentconsole
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.agentconsole.data.ExecutionHistory
-import com.example.agentconsole.data.ExecutionHistoryDao
+import com.synthnoirlabs.agentconsole.data.ExecutionHistory
+import com.synthnoirlabs.agentconsole.data.ExecutionHistoryDao
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

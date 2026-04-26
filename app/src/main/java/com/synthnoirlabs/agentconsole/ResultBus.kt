@@ -1,4 +1,4 @@
-package com.example.agentconsole
+package com.synthnoirlabs.agentconsole
 
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
@@ -13,6 +13,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
+enum class FailureKind {
+    Generic,
+    TermuxNotInstalled,
+    TermuxPermissionDenied,
+}
+
 object ResultBus {
     sealed interface Event {
         data class Running(val executionId: Int, val agent: String, val workingDir: String) : Event
@@ -26,7 +32,10 @@ object ResultBus {
             val internalErrorMessage: String
         ) : Event
 
-        data class Failed(val message: String) : Event
+        data class Failed(
+            val message: String,
+            val kind: FailureKind = FailureKind.Generic,
+        ) : Event
     }
 
     private val _events = MutableSharedFlow<Event>(extraBufferCapacity = 64)
@@ -56,8 +65,8 @@ object ResultBus {
         )
     }
 
-    fun fail(message: String) {
-        _events.tryEmit(Event.Failed(message))
+    fun fail(message: String, kind: FailureKind = FailureKind.Generic) {
+        _events.tryEmit(Event.Failed(message, kind))
     }
 }
 

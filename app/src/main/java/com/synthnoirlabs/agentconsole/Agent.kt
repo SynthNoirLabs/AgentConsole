@@ -1,4 +1,4 @@
-package com.example.agentconsole
+package com.synthnoirlabs.agentconsole
 
 enum class Agent(val cliName: String, val displayName: String) {
     CLAUDE("claude", "Claude Code"),

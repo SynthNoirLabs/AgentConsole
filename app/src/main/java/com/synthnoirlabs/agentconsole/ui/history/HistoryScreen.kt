@@ -1,4 +1,4 @@
-package com.example.agentconsole.ui.history
+package com.synthnoirlabs.agentconsole.ui.history
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
@@ -36,8 +36,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.agentconsole.HistoryViewModel
-import com.example.agentconsole.data.ExecutionHistory
+import com.synthnoirlabs.agentconsole.HistoryViewModel
+import com.synthnoirlabs.agentconsole.data.ExecutionHistory
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

@@ -1,4 +1,4 @@
-package com.example.agentconsole.data
+package com.synthnoirlabs.agentconsole.data
 
 import androidx.room.Database
 import androidx.room.RoomDatabase

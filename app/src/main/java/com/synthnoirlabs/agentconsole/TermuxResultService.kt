@@ -1,4 +1,4 @@
-package com.example.agentconsole
+package com.synthnoirlabs.agentconsole
 
 import android.app.Notification
 import android.app.NotificationChannel

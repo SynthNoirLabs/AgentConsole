@@ -1,4 +1,4 @@
-package com.example.agentconsole
+package com.synthnoirlabs.agentconsole
 
 import android.app.PendingIntent
 import android.content.Context
@@ -70,7 +70,10 @@ class TermuxRepository @Inject constructor() {
 
         if (!isTermuxInstalled(context)) {
             Log.w(TAG, "Run rejected: Termux not installed")
-            ResultBus.fail("Termux is not installed.")
+            ResultBus.fail(
+                "Termux is not installed. Install it from F-Droid (the Play Store build is unmaintained).",
+                FailureKind.TermuxNotInstalled,
+            )
             return
         }
 
@@ -129,7 +132,9 @@ class TermuxRepository @Inject constructor() {
         } catch (e: SecurityException) {
             Log.e(TAG, "SecurityException starting Termux for execution #$executionId", e)
             ResultBus.fail(
-                "Missing Termux permission. In Android Settings, grant this app 'Run commands in Termux environment', then enable allow-external-apps=true inside Termux."
+                "Missing Termux permission. Grant this app 'Run commands in Termux environment' " +
+                    "in Android Settings, then enable allow-external-apps=true inside Termux.",
+                FailureKind.TermuxPermissionDenied,
             )
         } catch (e: Exception) {
             Log.e(TAG, "Exception starting Termux for execution #$executionId", e)

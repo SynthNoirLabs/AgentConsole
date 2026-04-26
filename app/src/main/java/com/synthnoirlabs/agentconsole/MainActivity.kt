@@ -1,9 +1,14 @@
-package com.example.agentconsole
+package com.synthnoirlabs.agentconsole
 
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
+import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -11,10 +16,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import com.example.agentconsole.ui.navigation.AgentConsoleNavGraph
-import com.example.agentconsole.ui.theme.AgentConsoleTheme
+import androidx.compose.material3.TextButton
+import com.synthnoirlabs.agentconsole.ui.navigation.AgentConsoleNavGraph
+import com.synthnoirlabs.agentconsole.ui.theme.AgentConsoleTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -215,6 +222,85 @@ fun AgentConsoleApp(onNavigateToHistory: () -> Unit = {}) {
                 }.ifBlank { "No stderr yet." }
             )
         }
+
+        if (uiState.failureKind != FailureKind.Generic) {
+            TermuxFailureDialog(
+                kind = uiState.failureKind,
+                message = uiState.stderr,
+                onDismiss = viewModel::dismissFailureDialog,
+                onOpenAppPermissions = {
+                    openAppPermissions(context)
+                    viewModel.dismissFailureDialog()
+                },
+                onOpenTermux = {
+                    termuxRepository.openTermux(context)
+                    viewModel.dismissFailureDialog()
+                },
+                onInstallTermux = {
+                    openTermuxInstallPage(context)
+                    viewModel.dismissFailureDialog()
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun TermuxFailureDialog(
+    kind: FailureKind,
+    message: String,
+    onDismiss: () -> Unit,
+    onOpenAppPermissions: () -> Unit,
+    onOpenTermux: () -> Unit,
+    onInstallTermux: () -> Unit,
+) {
+    val (title, primaryLabel, primaryAction) = when (kind) {
+        FailureKind.TermuxNotInstalled ->
+            Triple("Termux not installed", "Install Termux", onInstallTermux)
+        FailureKind.TermuxPermissionDenied ->
+            Triple("Termux permission missing", "Open app permissions", onOpenAppPermissions)
+        FailureKind.Generic -> return
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { Text(message) },
+        confirmButton = {
+            TextButton(onClick = primaryAction) { Text(primaryLabel) }
+        },
+        dismissButton = {
+            Row {
+                if (kind == FailureKind.TermuxPermissionDenied) {
+                    TextButton(onClick = onOpenTermux) { Text("Open Termux") }
+                }
+                TextButton(onClick = onDismiss) { Text("Dismiss") }
+            }
+        },
+    )
+}
+
+private fun openAppPermissions(context: Context) {
+    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        data = Uri.fromParts("package", context.packageName, null)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    try {
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(context, "Could not open app settings.", Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun openTermuxInstallPage(context: Context) {
+    val intent = Intent(
+        Intent.ACTION_VIEW,
+        Uri.parse("https://f-droid.org/packages/com.termux/"),
+    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(context, "No browser available.", Toast.LENGTH_SHORT).show()
     }
 }
 

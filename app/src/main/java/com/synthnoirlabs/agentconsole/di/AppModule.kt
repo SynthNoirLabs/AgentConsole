@@ -1,10 +1,10 @@
-package com.example.agentconsole.di
+package com.synthnoirlabs.agentconsole.di
 
 import android.content.Context
 import androidx.room.Room
-import com.example.agentconsole.TermuxRepository
-import com.example.agentconsole.data.AppDatabase
-import com.example.agentconsole.data.ExecutionHistoryDao
+import com.synthnoirlabs.agentconsole.TermuxRepository
+import com.synthnoirlabs.agentconsole.data.AppDatabase
+import com.synthnoirlabs.agentconsole.data.ExecutionHistoryDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

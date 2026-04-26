@@ -1,12 +1,12 @@
-package com.example.agentconsole.ui.navigation
+package com.synthnoirlabs.agentconsole.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.agentconsole.AgentConsoleApp
-import com.example.agentconsole.ui.history.HistoryScreen
+import com.synthnoirlabs.agentconsole.AgentConsoleApp
+import com.synthnoirlabs.agentconsole.ui.history.HistoryScreen
 
 @Composable
 fun AgentConsoleNavGraph(

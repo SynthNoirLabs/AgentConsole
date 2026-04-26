@@ -12,3 +12,8 @@ local.properties
 
 # Gradle wrapper jar must be committed (overrides global *.jar ignore)
 !gradle/wrapper/gradle-wrapper.jar
+
+# Signing material must never be committed
+*.keystore
+*.jks
+keystore.properties

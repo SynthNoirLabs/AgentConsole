@@ -1,4 +1,4 @@
-package com.example.agentconsole
+package com.synthnoirlabs.agentconsole
 
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull

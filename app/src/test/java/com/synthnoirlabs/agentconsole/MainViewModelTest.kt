@@ -1,9 +1,9 @@
-package com.example.agentconsole
+package com.synthnoirlabs.agentconsole
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.example.agentconsole.data.ExecutionHistory
-import com.example.agentconsole.data.ExecutionHistoryDao
+import com.synthnoirlabs.agentconsole.data.ExecutionHistory
+import com.synthnoirlabs.agentconsole.data.ExecutionHistoryDao
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first

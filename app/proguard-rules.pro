@@ -24,8 +24,8 @@
 
 # ----- AgentConsole App Classes -----
 # Keep all app classes (avoid stripping TermuxRunner, ExecutionStore, etc.)
--keep class com.example.agentconsole.** { *; }
--keepclassmembers class com.example.agentconsole.** { *; }
+-keep class com.synthnoirlabs.agentconsole.** { *; }
+-keepclassmembers class com.synthnoirlabs.agentconsole.** { *; }
 
 # ----- Termux -----
 # Keep Termux shared library classes (IPC and service interfaces)

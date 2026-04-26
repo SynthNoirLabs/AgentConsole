@@ -51,12 +51,13 @@ Test reports are written to:
 ## Project Structure
 
 ```
-app/src/main/java/com/example/agentconsole/
+app/src/main/java/com/synthnoirlabs/agentconsole/
   Agent.kt              # Agent enum (Claude, Gemini, Codex, OpenCode)
-  ExecutionStore.kt     # Reactive state holder (StateFlow)
   MainActivity.kt       # Compose UI entry point
+  MainViewModel.kt      # StateFlow-based ViewModel
+  TermuxRepository.kt   # Sends RUN_COMMAND intents + input validation
   TermuxResultService.kt # Receives results via broadcast from Termux
-  TermuxRunner.kt       # Sends RUN_COMMAND intents to Termux
+  ResultBus.kt          # SharedFlow bridge from service to ViewModel
 scripts/
   agent_runner.sh       # Shell helper dispatched by Termux
 ```

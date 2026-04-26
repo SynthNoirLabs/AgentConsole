@@ -1,11 +1,11 @@
-package com.example.agentconsole
+package com.synthnoirlabs.agentconsole
 
 import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.agentconsole.data.ExecutionHistory
-import com.example.agentconsole.data.ExecutionHistoryDao
+import com.synthnoirlabs.agentconsole.data.ExecutionHistory
+import com.synthnoirlabs.agentconsole.data.ExecutionHistoryDao
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -25,7 +25,8 @@ data class ExecutionUiState(
     val internalErrorCode: Int? = null,
     val internalErrorMessage: String = "",
     val lastExecutionId: Int? = null,
-    val isRunning: Boolean = false
+    val isRunning: Boolean = false,
+    val failureKind: FailureKind = FailureKind.Generic,
 )
 
 @HiltViewModel
@@ -59,7 +60,7 @@ class MainViewModel @Inject constructor(
                     }
 
                     is ResultBus.Event.Failed -> {
-                        fail(event.message)
+                        fail(event.message, event.kind)
                     }
                 }
             }
@@ -162,13 +163,20 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun fail(message: String) {
-        Log.e(TAG, "fail: $message")
+    fun fail(message: String, kind: FailureKind = FailureKind.Generic) {
+        Log.e(TAG, "fail($kind): $message")
         _uiState.value = _uiState.value.copy(
             status = "Failed",
             stderr = message,
-            isRunning = false
+            isRunning = false,
+            failureKind = kind,
         )
+    }
+
+    fun dismissFailureDialog() {
+        if (_uiState.value.failureKind != FailureKind.Generic) {
+            _uiState.value = _uiState.value.copy(failureKind = FailureKind.Generic)
+        }
     }
 
     companion object {

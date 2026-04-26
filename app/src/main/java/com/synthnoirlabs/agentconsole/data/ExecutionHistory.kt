@@ -1,4 +1,4 @@
-package com.example.agentconsole.data
+package com.synthnoirlabs.agentconsole.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
